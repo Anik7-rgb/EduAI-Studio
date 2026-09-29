@@ -1,0 +1,298 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Mind Map Generator | Task 4</title>
+  <meta name="description" content="Paste your syllabus and AI generates an interactive visual mind map." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07); --accent: #ec4899; --accent-light: #f472b6; --text: #e2e8f0; --muted: #64748b; --radius: 14px; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #ec4899; top: -150px; right: -100px; }
+    .orb-b { width: 400px; height: 400px; background: #7c3aed; bottom: -100px; left: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .top-panel { position: relative; z-index: 1; padding: 32px 32px 24px; border-bottom: 1px solid var(--border); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 16px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .field { flex: 1; min-width: 200px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    input, textarea, select { background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s; width: 100%; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(236,72,153,0.12); }
+    .api-row { display: flex; gap: 10px; }
+    .api-row input { flex: 1; }
+    .btn-load { padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(236,72,153,0.3); background: rgba(236,72,153,0.12); color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: Inter, sans-serif; transition: all 0.2s; }
+    .btn-load:hover { background: rgba(236,72,153,0.25); }
+    .btn-load:disabled { opacity: 0.6; cursor: not-allowed; }
+    .textarea-wrap textarea { min-height: 80px; resize: vertical; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+    .btn-primary { background: linear-gradient(135deg, #ec4899, #7c3aed); color: #fff; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(236,72,153,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .map-area { position: relative; z-index: 1; flex: 1; }
+    .loader { display: none; position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+    .spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #svgCanvas { width: 100%; height: calc(100vh - 280px); min-height: 400px; cursor: grab; }
+    #svgCanvas:active { cursor: grabbing; }
+
+    .empty-state { display: flex; align-items: center; justify-content: center; flex-direction: column; height: calc(100vh - 280px); gap: 12px; color: var(--muted); }
+    .empty-state .icon { font-size: 56px; }
+    .empty-state p { font-size: 14px; max-width: 300px; text-align: center; }
+
+    .tooltip { position: fixed; background: #1e1e32; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: var(--text); max-width: 260px; pointer-events: none; z-index: 100; display: none; }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">🗺️ AI Mind Map Generator</span>
+  </nav>
+
+  <div class="top-panel">
+    <div class="badge">🗺️ Task 4</div>
+    <h1>AI Mind Map Generator</h1>
+    <p class="subtitle">Paste your syllabus or topic list — AI breaks it into a visual, interactive mind map.</p>
+    <div class="controls">
+      <div class="field" style="flex-basis:100%;">
+        <label>RouteAPI Key</label>
+        <div class="api-row">
+          <input type="password" id="apiKey" placeholder="sk-..." />
+          <button type="button" onclick="loadModels()" id="testBtn" class="btn-load">🔌 Load Models</button>
+        </div>
+        <div id="connStatus" style="font-size:12px;margin-top:6px;display:none;"></div>
+      </div>
+      <div class="field" style="flex-basis:100%;max-width:480px;">
+        <label>Model <span id="modelCount" style="color:#64748b;font-weight:400;"></span></label>
+        <select id="modelSel">
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+          <option value="openai/gpt-4o">openai/gpt-4o</option>
+          <option value="anthropic/claude-3-5-haiku">anthropic/claude-3-5-haiku</option>
+          <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+        </select>
+        <p style="font-size:11px;color:#475569;margin-top:5px;">Click "Load Models" above to fetch your actual available models.</p>
+      </div>
+      <div class="field textarea-wrap">
+        <label>Syllabus / Topic List</label>
+        <textarea id="syllabusText" placeholder="e.g. Machine Learning: supervised learning, neural networks, decision trees&#10;Data Structures: arrays, linked lists, trees..."></textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary" id="genBtn" onclick="generateMindMap()">✨ Generate Mind Map</button>
+        <button class="btn" style="background:var(--card);border:1px solid var(--border);color:var(--text);font-size:13px;" onclick="resetZoom()">↺ Reset View</button>
+      </div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="map-area">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">🗺️</div>
+      <p>Your mind map will appear here. Enter syllabus content and click Generate.</p>
+    </div>
+    <div class="loader" id="loader" style="display:none;">
+      <div class="spinner"></div>
+      <p style="color:var(--muted);font-size:14px;">AI is mapping your topics...</p>
+    </div>
+    <svg id="svgCanvas" style="display:none;"></svg>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    const COLORS = ['#f472b6','#a78bfa','#34d399','#fbbf24','#38bdf8','#f87171','#818cf8','#2dd4bf','#fb923c'];
+    let svgData = null, viewBox = { x: 0, y: 0, w: 800, h: 600 }, isDragging = false, lastPos = { x: 0, y: 0 };
+
+    async function generateMindMap() {
+      const key = document.getElementById('apiKey').value.trim();
+      const text = document.getElementById('syllabusText').value.trim();
+      if (!key) { showError('Please enter your RouteAPI Key.'); return; }
+      if (!text) { showError('Please enter syllabus content.'); return; }
+
+      const prompt = `Convert this syllabus into a mind map JSON structure. Return ONLY valid JSON with this format:
+{
+  "root": "Main Topic",
+  "children": [
+    {
+      "name": "Branch 1",
+      "children": [{"name": "Sub-topic A"}, {"name": "Sub-topic B"}]
+    }
+  ]
+}
+Identify the main overarching topic and create 4-7 branches with 2-4 sub-topics each.
+Syllabus:
+${text}`;
+
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('loader').style.display = 'flex';
+      document.getElementById('svgCanvas').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('genBtn').disabled = true;
+
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model: document.getElementById('modelSel').value, messages: [{ role: 'user', content: prompt }], max_tokens: 900 })
+        });
+        const json = await res.json();
+        if (json.error) { showError(json.error.message); return; }
+        let raw = json.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
+        svgData = JSON.parse(raw);
+        renderMindMap(svgData);
+      } catch (e) { showError('Error: ' + e.message); }
+    }
+
+    function renderMindMap(data) {
+      const svg = document.getElementById('svgCanvas');
+      const W = svg.clientWidth || 900, H = svg.clientHeight || 600;
+      const cx = W / 2, cy = H / 2;
+      const branches = data.children || [];
+      let elements = '';
+      const angleStep = (2 * Math.PI) / branches.length;
+      const r1 = 200, r2 = 340;
+
+      // Root
+      elements += `<circle cx="${cx}" cy="${cy}" r="52" fill="#7c3aed" opacity="0.9"/>
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Outfit,sans-serif" font-weight="700" font-size="14">${wrapText(data.root)}</text>`;
+
+      branches.forEach((branch, i) => {
+        const angle = i * angleStep - Math.PI / 2;
+        const bx = cx + r1 * Math.cos(angle), by = cy + r1 * Math.sin(angle);
+        const color = COLORS[i % COLORS.length];
+        // Line to branch
+        elements += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="${color}" stroke-width="2" opacity="0.6"/>`;
+        // Branch node
+        const bLabel = branch.name.length > 18 ? branch.name.slice(0, 16) + '…' : branch.name;
+        elements += `<ellipse cx="${bx}" cy="${by}" rx="56" ry="26" fill="${color}" opacity="0.85"/>
+        <text x="${bx}" y="${by}" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Inter,sans-serif" font-weight="600" font-size="12">${bLabel}</text>`;
+
+        const subs = branch.children || [];
+        const sCount = subs.length;
+        const spread = Math.PI / 2.5;
+        subs.forEach((sub, j) => {
+          const sa = angle + (j - (sCount - 1) / 2) * (spread / Math.max(sCount - 1, 1));
+          const sx = bx + (r2 - r1) * Math.cos(sa), sy = by + (r2 - r1) * Math.sin(sa);
+          const sLabel = sub.name.length > 16 ? sub.name.slice(0, 14) + '…' : sub.name;
+          elements += `<line x1="${bx}" y1="${by}" x2="${sx}" y2="${sy}" stroke="${color}" stroke-width="1.5" opacity="0.4"/>`;
+          elements += `<rect x="${sx - 46}" y="${sy - 15}" width="92" height="30" rx="8" fill="${color}22" stroke="${color}" stroke-width="1.2"/>
+          <text x="${sx}" y="${sy}" text-anchor="middle" dominant-baseline="middle" fill="${color}" font-family="Inter,sans-serif" font-size="11">${sLabel}</text>`;
+        });
+      });
+
+      svg.innerHTML = `<g id="mapGroup">${elements}</g>`;
+      viewBox = { x: 0, y: 0, w: W, h: H };
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      document.getElementById('loader').style.display = 'none';
+      svg.style.display = 'block';
+      document.getElementById('genBtn').disabled = false;
+      initPanZoom(svg);
+    }
+
+    function wrapText(text) {
+      if (text.length <= 12) return text;
+      const words = text.split(' ');
+      const lines = []; let line = '';
+      words.forEach(w => {
+        if ((line + w).length > 10) { lines.push(line.trim()); line = w + ' '; }
+        else line += w + ' ';
+      });
+      if (line.trim()) lines.push(line.trim());
+      return lines.slice(0, 2).map((l, i) => `<tspan x="${0}" dy="${i === 0 ? -6 : 14}">${l}</tspan>`).join('');
+    }
+
+    function initPanZoom(svg) {
+      svg.addEventListener('mousedown', e => { isDragging = true; lastPos = { x: e.clientX, y: e.clientY }; });
+      svg.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        const dx = (lastPos.x - e.clientX) * viewBox.w / svg.clientWidth;
+        const dy = (lastPos.y - e.clientY) * viewBox.h / svg.clientHeight;
+        viewBox.x += dx; viewBox.y += dy;
+        lastPos = { x: e.clientX, y: e.clientY };
+        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+      });
+      svg.addEventListener('mouseup', () => isDragging = false);
+      svg.addEventListener('wheel', e => {
+        e.preventDefault();
+        const scale = e.deltaY > 0 ? 1.1 : 0.9;
+        viewBox.w *= scale; viewBox.h *= scale;
+        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+      });
+    }
+
+    function resetZoom() {
+      const svg = document.getElementById('svgCanvas');
+      const W = svg.clientWidth, H = svg.clientHeight;
+      viewBox = { x: 0, y: 0, w: W, h: H };
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    }
+
+    function showError(msg) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'flex';
+      document.getElementById('genBtn').disabled = false;
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    async function loadModels() {
+      const key = document.getElementById('apiKey').value.trim();
+      const status = document.getElementById('connStatus');
+      const btn = document.getElementById('testBtn');
+      if (!key) { status.style.display = 'block'; status.style.color = '#f87171'; status.textContent = '⚠ Enter your API key first.'; return; }
+      status.style.display = 'block'; status.style.color = '#94a3b8'; status.textContent = '🔌 Fetching models from RouteAPI...';
+      btn.textContent = '⏳ Loading...'; btn.disabled = true;
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/models', {
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (res.ok && json.data && json.data.length > 0) {
+          const sel = document.getElementById('modelSel');
+          sel.innerHTML = '';
+          json.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.id;
+            sel.appendChild(opt);
+          });
+          const preferred = ['gpt-4o-mini', 'openai/gpt-4o-mini'];
+          for (const p of preferred) {
+            if ([...sel.options].some(o => o.value === p)) { sel.value = p; break; }
+          }
+          document.getElementById('modelCount').textContent = `(${json.data.length} available)`;
+          status.style.color = '#34d399';
+          status.textContent = `✅ Connected! ${json.data.length} models loaded. Pick one above and generate.`;
+        } else {
+          status.style.color = '#f87171';
+          status.textContent = '❌ ' + (json.error?.message || JSON.stringify(json).slice(0, 120));
+        }
+      } catch (e) {
+        status.style.color = '#f87171';
+        status.textContent = '❌ Network error: ' + e.message;
+      }
+      btn.textContent = '🔌 Load Models'; btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1426 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduAI Studio — 10 AI-Powered Student Tools</title>
+  <meta name="description" content="A premium suite of 10 AI-powered web tools for students — build smarter with RouteAPI, OCR, and real-time interactivity." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    /* ── TOKENS ── */
+    :root {
+      --bg:       #06060f;
+      --bg2:      #0b0b18;
+      --surface:  #0f0f1e;
+      --surface2: #141428;
+      --border:   rgba(255,255,255,0.06);
+      --border2:  rgba(255,255,255,0.10);
+      --text:     #e8eaf0;
+      --text2:    #8892a4;
+      --text3:    #525d6e;
+      --violet:   #7c3aed;
+      --violet2:  #a78bfa;
+      --blue:     #2563eb;
+      --blue2:    #60a5fa;
+      --cyan:     #06b6d4;
+      --cyan2:    #67e8f9;
+      --r: 18px;
+      --nav-h: 68px;
+    }
+
+    /* ── BASE ── */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════════════════════════════
+       ANIMATED BACKGROUND CANVAS
+    ══════════════════════════════════════ */
+    #bgCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Mesh gradient overlay */
+    .mesh-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(124,58,237,0.13) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 10%, rgba(6,182,212,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 100%, rgba(37,99,235,0.09) 0%, transparent 60%);
+    }
+
+    /* ══════════════════════════════════════
+       NAVBAR
+    ══════════════════════════════════════ */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      padding: 0 40px;
+      justify-content: space-between;
+      transition: background 0.3s, border-color 0.3s, backdrop-filter 0.3s;
+    }
+    .navbar.scrolled {
+      background: rgba(6,6,15,0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--violet), var(--cyan));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px rgba(124,58,237,0.4);
+    }
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .logo-text span { color: var(--violet2); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text2);
+      text-decoration: none;
+      transition: color 0.2s;
+      letter-spacing: -0.1px;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-nav {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      letter-spacing: -0.1px;
+    }
+    .btn-nav-ghost {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--text2);
+    }
+    .btn-nav-ghost:hover { border-color: var(--violet2); color: var(--violet2); }
+    .btn-nav-primary {
+      background: linear-gradient(135deg, var(--violet), var(--blue));
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.3);
+    }
+    .btn-nav-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(124,58,237,0.45); }
+
+    /* ══════════════════════════════════════
+       HERO
+    ══════════════════════════════════════ */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: calc(var(--nav-h) + 60px) 24px 80px;
+    }
+
+    /* Announcement bar */
+    .announce-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(124,58,237,0.08);
+      border: 1px solid rgba(124,58,237,0.22);
+      border-radius: 100px;
+      padding: 7px 18px 7px 7px;
+      margin-bottom: 40px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .announce-bar:hover { border-color: rgba(124,58,237,0.45); background: rgba(124,58,237,0.13); }
+    .announce-pill {
+      background: linear-gradient(135deg, var(--violet), var(--blue));
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 100px;
+    }
+    .announce-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      letter-spacing: -0.1px;
+    }
+    .announce-arrow {
+      font-size: 13px;
+      color: var(--violet2);
+    }
+
+    /* Headline */
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--violet2);
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+
+    .hero-h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(44px, 6.5vw, 90px);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -2px;
+      margin-bottom: 28px;
+      max-width: 900px;
+    }
+    .hero-h1 .line1 { display: block; color: #f0f2f8; }
+    .hero-h1 .line2 {
+      display: block;
+      background: linear-gradient(90deg, var(--violet2) 0%, var(--cyan2) 60%, var(--blue2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmerText 4s ease-in-out infinite alternate;
+      background-size: 200% 100%;
+    }
+    @keyframes shimmerText {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 1.8vw, 20px);
+      color: var(--text2);
+      max-width: 580px;
+      line-height: 1.7;
+      margin-bottom: 44px;
+      font-weight: 400;
+    }
+    .hero-sub strong { color: var(--text); font-weight: 500; }
+
+    /* CTA group */
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 72px;
+    }
+    .btn-hero-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, var(--violet), var(--blue));
+      padding: 15px 32px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 8px 32px rgba(124,58,237,0.4);
+      transition: all 0.25s;
+      letter-spacing: -0.2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-hero-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 48px rgba(124,58,237,0.55); }
+    .btn-hero-primary:hover::after { opacity: 1; }
+
+    .btn-hero-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text2);
+      background: transparent;
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      letter-spacing: -0.1px;
+    }
+    .btn-hero-ghost:hover { border-color: var(--violet2); color: var(--violet2); background: rgba(124,58,237,0.06); }
+
+    /* ── Trust bar ── */
+    .trust-bar {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text3);
+      font-weight: 500;
+    }
+    .trust-icon { font-size: 16px; }
+    .trust-sep { width: 1px; height: 20px; background: var(--border2); }
+
+    /* Scroll hint */
+    .scroll-hint {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text3);
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      animation: scrollBounce 2s ease-in-out infinite;
+    }
+    .scroll-line {
+      width: 1px;
+      height: 32px;
+      background: linear-gradient(to bottom, var(--violet2), transparent);
+    }
+    @keyframes scrollBounce { 0%,100% { opacity: 0.4; transform: translateX(-50%) translateY(0); } 50% { opacity: 0.9; transform: translateX(-50%) translateY(6px); } }
+
+    /* ══════════════════════════════════════
+       STATS BAND
+    ══════════════════════════════════════ */
+    .stats-band {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+      backdrop-filter: blur(10px);
+      padding: 40px 24px;
+    }
+    .stats-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 40px;
+      text-align: center;
+    }
+    .stat-item {}
+    .stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, #f0f2f8, var(--violet2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--text2);
+      font-weight: 500;
+      letter-spacing: -0.1px;
+    }
+
+    /* ══════════════════════════════════════
+       FEATURES ROW
+    ══════════════════════════════════════ */
+    .features-row {
+      position: relative;
+      z-index: 1;
+      padding: 96px 24px 0;
+    }
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .section-label-line {
+      width: 40px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--violet));
+    }
+    .section-label-line.r { background: linear-gradient(90deg, var(--violet), transparent); }
+    .section-label-text {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--violet2);
+    }
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(30px, 4vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .section-sub {
+      font-size: 17px;
+      color: var(--text2);
+      text-align: center;
+      max-width: 540px;
+      margin: 0 auto 64px;
+      line-height: 1.7;
+    }
+
+    .feat-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .feat-item {
+      background: var(--bg);
+      padding: 36px 32px;
+      transition: background 0.25s;
+    }
+    .feat-item:hover { background: var(--surface); }
+    .feat-icon-wrap {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .feat-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    .feat-desc { font-size: 14px; color: var(--text2); line-height: 1.65; }
+
+    /* ══════════════════════════════════════
+       TOOLS SECTION
+    ══════════════════════════════════════ */
+    .tools-section {
+      position: relative;
+      z-index: 1;
+      padding: 96px 24px 120px;
+    }
+
+    .tools-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    /* ── Tool card ── */
+    .tool-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),
+                  border-color 0.3s,
+                  box-shadow 0.3s;
+      cursor: pointer;
+    }
+    .tool-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--card-color, rgba(124,58,237,0.4));
+      box-shadow: 0 24px 64px -8px rgba(0,0,0,0.6),
+                  0 0 0 1px var(--card-color, rgba(124,58,237,0.15));
+    }
+
+    /* Top accent bar */
+    .card-accent-bar {
+      height: 3px;
+      background: var(--card-gradient, linear-gradient(90deg, #7c3aed, #2563eb));
+      width: 100%;
+    }
+
+    /* Card interior glow on hover */
+    .tool-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 200px;
+      background: var(--card-glow, radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08), transparent 70%));
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+    .tool-card:hover::before { opacity: 1; }
+
+    .card-body {
+      padding: 28px 28px 24px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 0;
+    }
+
+    /* Header row */
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .card-icon-wrap {
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      background: var(--card-icon-bg, rgba(124,58,237,0.1));
+      border: 1px solid var(--card-icon-border, rgba(124,58,237,0.18));
+      flex-shrink: 0;
+      transition: transform 0.3s;
+    }
+    .tool-card:hover .card-icon-wrap { transform: scale(1.08) rotate(-3deg); }
+
+    .card-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--card-accent, #a78bfa);
+      background: var(--card-badge-bg, rgba(124,58,237,0.08));
+      border: 1px solid var(--card-icon-border, rgba(124,58,237,0.18));
+      padding: 5px 10px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 21px;
+      font-weight: 700;
+      color: #f0f2f8;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .card-desc {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.68;
+      margin-bottom: 22px;
+      flex: 1;
+    }
+
+    /* Tags */
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      padding: 4px 11px;
+      border-radius: 100px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--text3);
+      transition: all 0.2s;
+    }
+    .tool-card:hover .tag {
+      background: rgba(255,255,255,0.06);
+      color: var(--text2);
+    }
+
+    /* Footer row */
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .card-learning {
+      font-size: 12px;
+      color: var(--text3);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .card-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: var(--card-icon-bg, rgba(124,58,237,0.1));
+      border: 1px solid var(--card-icon-border, rgba(124,58,237,0.18));
+      color: var(--card-accent, #a78bfa);
+      font-size: 16px;
+      transition: all 0.25s;
+    }
+    .tool-card:hover .card-arrow {
+      background: var(--card-accent, #a78bfa);
+      color: #fff;
+      border-color: transparent;
+      transform: translateX(3px);
+    }
+
+    /* ── Per-card colors ── */
+    .t1  { --card-color: rgba(124,58,237,0.45); --card-gradient: linear-gradient(90deg,#7c3aed,#4f46e5); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(124,58,237,0.12),transparent 70%); --card-icon-bg: rgba(124,58,237,0.1); --card-icon-border: rgba(124,58,237,0.2); --card-accent: #a78bfa; --card-badge-bg: rgba(124,58,237,0.08); }
+    .t2  { --card-color: rgba(16,185,129,0.45); --card-gradient: linear-gradient(90deg,#10b981,#059669); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(16,185,129,0.12),transparent 70%); --card-icon-bg: rgba(16,185,129,0.1); --card-icon-border: rgba(16,185,129,0.2); --card-accent: #34d399; --card-badge-bg: rgba(16,185,129,0.08); }
+    .t3  { --card-color: rgba(245,158,11,0.45); --card-gradient: linear-gradient(90deg,#f59e0b,#d97706); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(245,158,11,0.12),transparent 70%); --card-icon-bg: rgba(245,158,11,0.1); --card-icon-border: rgba(245,158,11,0.2); --card-accent: #fbbf24; --card-badge-bg: rgba(245,158,11,0.08); }
+    .t4  { --card-color: rgba(236,72,153,0.45); --card-gradient: linear-gradient(90deg,#ec4899,#db2777); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(236,72,153,0.12),transparent 70%); --card-icon-bg: rgba(236,72,153,0.1); --card-icon-border: rgba(236,72,153,0.2); --card-accent: #f472b6; --card-badge-bg: rgba(236,72,153,0.08); }
+    .t5  { --card-color: rgba(14,165,233,0.45); --card-gradient: linear-gradient(90deg,#0ea5e9,#0284c7); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(14,165,233,0.12),transparent 70%); --card-icon-bg: rgba(14,165,233,0.1); --card-icon-border: rgba(14,165,233,0.2); --card-accent: #38bdf8; --card-badge-bg: rgba(14,165,233,0.08); }
+    .t6  { --card-color: rgba(239,68,68,0.45); --card-gradient: linear-gradient(90deg,#ef4444,#dc2626); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(239,68,68,0.12),transparent 70%); --card-icon-bg: rgba(239,68,68,0.1); --card-icon-border: rgba(239,68,68,0.2); --card-accent: #f87171; --card-badge-bg: rgba(239,68,68,0.08); }
+    .t7  { --card-color: rgba(168,85,247,0.45); --card-gradient: linear-gradient(90deg,#a855f7,#9333ea); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(168,85,247,0.12),transparent 70%); --card-icon-bg: rgba(168,85,247,0.1); --card-icon-border: rgba(168,85,247,0.2); --card-accent: #c084fc; --card-badge-bg: rgba(168,85,247,0.08); }
+    .t8  { --card-color: rgba(20,184,166,0.45); --card-gradient: linear-gradient(90deg,#14b8a6,#0d9488); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(20,184,166,0.12),transparent 70%); --card-icon-bg: rgba(20,184,166,0.1); --card-icon-border: rgba(20,184,166,0.2); --card-accent: #2dd4bf; --card-badge-bg: rgba(20,184,166,0.08); }
+    .t9  { --card-color: rgba(249,115,22,0.45); --card-gradient: linear-gradient(90deg,#f97316,#ea580c); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(249,115,22,0.12),transparent 70%); --card-icon-bg: rgba(249,115,22,0.1); --card-icon-border: rgba(249,115,22,0.2); --card-accent: #fb923c; --card-badge-bg: rgba(249,115,22,0.08); }
+    .t10 { --card-color: rgba(99,102,241,0.45); --card-gradient: linear-gradient(90deg,#6366f1,#4f46e5); --card-glow: radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.12),transparent 70%); --card-icon-bg: rgba(99,102,241,0.1); --card-icon-border: rgba(99,102,241,0.2); --card-accent: #818cf8; --card-badge-bg: rgba(99,102,241,0.08); }
+
+    /* ══════════════════════════════════════
+       API KEY NOTICE
+    ══════════════════════════════════════ */
+    .api-notice {
+      max-width: 1200px;
+      margin: 0 auto 64px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .api-notice-inner {
+      background: linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(6,182,212,0.07) 100%);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 16px;
+      padding: 22px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .api-notice-inner::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px; bottom: -1px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(124,58,237,0.15), transparent, rgba(6,182,212,0.12));
+      pointer-events: none;
+      opacity: 0.5;
+    }
+    .api-notice-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .api-notice-body { flex: 1; min-width: 200px; }
+    .api-notice-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--violet2);
+      margin-bottom: 3px;
+      letter-spacing: -0.2px;
+    }
+    .api-notice-desc { font-size: 13px; color: var(--text2); }
+    .api-notice-badge {
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════ */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 48px 40px;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .footer-brand {}
+    .footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .footer-logo-mark {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--violet), var(--cyan));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .footer-logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .footer-logo-text span { color: var(--violet2); }
+    .footer-tagline { font-size: 13px; color: var(--text3); max-width: 260px; line-height: 1.6; }
+
+    .footer-links-group {}
+    .footer-links-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-bottom: 16px; }
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a { font-size: 13px; color: var(--text2); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-bottom {
+      max-width: 1200px;
+      margin: 32px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-copy { font-size: 12px; color: var(--text3); }
+    .footer-tech { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text3); }
+    .tech-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+
+    /* ══════════════════════════════════════
+       SCROLL ANIMATIONS
+    ══════════════════════════════════════ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s cubic-bezier(0.25,0.46,0.45,0.94),
+                  transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.05s; }
+    .reveal-delay-2 { transition-delay: 0.10s; }
+    .reveal-delay-3 { transition-delay: 0.15s; }
+    .reveal-delay-4 { transition-delay: 0.20s; }
+    .reveal-delay-5 { transition-delay: 0.25s; }
+
+    /* ══════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+      .feat-grid { grid-template-columns: repeat(2, 1fr); }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 640px) {
+      .navbar { padding: 0 20px; }
+      .hero { padding: calc(var(--nav-h) + 40px) 16px 60px; }
+      .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .tools-grid { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; gap: 32px; }
+      .footer-bottom { flex-direction: column; gap: 8px; }
+      .btn-nav-ghost { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Animated background canvas ── -->
+  <canvas id="bgCanvas"></canvas>
+  <div class="mesh-overlay"></div>
+
+  <!-- ══════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════ -->
+  <nav class="navbar" id="navbar">
+    <a class="nav-logo" href="#">
+      <div class="logo-mark">🎓</div>
+      <span class="logo-text">Edu<span>AI</span> Studio</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="https://www.routeapi.ai/console/token" target="_blank">API Keys</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a class="btn-nav btn-nav-ghost" href="https://www.routeapi.ai/console/token" target="_blank">Get API Key</a>
+      <a class="btn-nav btn-nav-primary" href="#tools">Explore Tools</a>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════
+       HERO
+  ══════════════════════════════════════ -->
+  <section class="hero">
+    <div class="announce-bar" onclick="window.open('https://routeapi.ai','_blank')">
+      <span class="announce-pill">New</span>
+      <span class="announce-text">Powered by GPT-4o Mini — fast & affordable</span>
+      <span class="announce-arrow">→</span>
+    </div>
+
+    <p class="hero-eyebrow">10 In-Class AI Projects</p>
+
+    <h1 class="hero-h1">
+      <span class="line1">Build Smarter.</span>
+      <span class="line2">Learn Faster.</span>
+    </h1>
+
+    <p class="hero-sub">
+      A premium suite of <strong>10 AI-powered web tools</strong> built with HTML, CSS, JS &amp; RouteAPI. 
+      Each app takes user input, calls the AI, and renders structured output — beautifully.
+    </p>
+
+    <div class="hero-ctas">
+      <a class="btn-hero-primary" href="#tools">
+        <span>⚡</span> Explore All Tools
+      </a>
+      <a class="btn-hero-ghost" href="https://www.routeapi.ai/console/token" target="_blank">
+        <span>🔑</span> Get RouteAPI key
+      </a>
+    </div>
+
+    <div class="trust-bar">
+      <div class="trust-item"><span class="trust-icon">✅</span> No login required</div>
+      <div class="trust-sep"></div>
+      <div class="trust-item"><span class="trust-icon">🔒</span> API key stays local</div>
+      <div class="trust-sep"></div>
+      <div class="trust-item"><span class="trust-icon">⚡</span> Instant AI responses</div>
+      <div class="trust-sep"></div>
+      <div class="trust-item"><span class="trust-icon">🎨</span> Premium UI design</div>
+    </div>
+
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      Scroll
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════
+       STATS
+  ══════════════════════════════════════ -->
+  <div class="stats-band">
+    <div class="stats-inner">
+      <div class="stat-item reveal">
+        <div class="stat-value" data-count="10">0</div>
+        <div class="stat-label">AI-Powered Tools</div>
+      </div>
+      <div class="stat-item reveal reveal-delay-1">
+        <div class="stat-value" data-count="0">RouteAPI</div>
+        <div class="stat-label">Model Integrated</div>
+      </div>
+      <div class="stat-item reveal reveal-delay-2">
+        <div class="stat-value" data-count="100">0</div>
+        <div class="stat-label">% Browser-Based</div>
+      </div>
+      <div class="stat-item reveal reveal-delay-3">
+        <div class="stat-value" data-count="0">0s</div>
+        <div class="stat-label">Setup Required</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FEATURES
+  ══════════════════════════════════════ -->
+  <section class="features-row" id="features">
+    <div class="section-label">
+      <div class="section-label-line"></div>
+      <span class="section-label-text">Why EduAI Studio</span>
+      <div class="section-label-line r"></div>
+    </div>
+    <h2 class="section-title reveal">Built for Real Learning</h2>
+    <p class="section-sub reveal">Every tool follows the same pattern — input, AI, output — making it perfect for classroom projects and solo builders.</p>
+
+    <div class="feat-grid" style="max-width:1100px;margin:0 auto;">
+      <div class="feat-item reveal">
+        <div class="feat-icon-wrap">🧠</div>
+        <div class="feat-title">GPT-4o Mini Integration</div>
+        <div class="feat-desc">Each tool sends structured prompts to RouteAPI and parses the response into beautiful, usable output — JSON, Markdown, text.</div>
+      </div>
+      <div class="feat-item reveal reveal-delay-1">
+        <div class="feat-icon-wrap">⚡</div>
+        <div class="feat-title">Zero Setup, Instant Start</div>
+        <div class="feat-desc">No servers, no install, no backend. Just open an HTML file in your browser, enter your API key, and you're running.</div>
+      </div>
+      <div class="feat-item reveal reveal-delay-2">
+        <div class="feat-icon-wrap">🎨</div>
+        <div class="feat-title">Premium Dark UI</div>
+        <div class="feat-desc">Every tool ships with a polished glassmorphism design, smooth animations, and responsive layout out of the box.</div>
+      </div>
+      <div class="feat-item reveal">
+        <div class="feat-icon-wrap">🔒</div>
+        <div class="feat-title">Privacy First</div>
+        <div class="feat-desc">Your API key never leaves your browser. No accounts, no tracking, no telemetry. Open source and fully transparent.</div>
+      </div>
+      <div class="feat-item reveal reveal-delay-1">
+        <div class="feat-icon-wrap">📖</div>
+        <div class="feat-title">Educational Focus</div>
+        <div class="feat-desc">Each task teaches a distinct concept — prompt engineering, JSON parsing, DOM generation, OCR, or API integration.</div>
+      </div>
+      <div class="feat-item reveal reveal-delay-2">
+        <div class="feat-icon-wrap">🛠️</div>
+        <div class="feat-title">Fully Customizable</div>
+        <div class="feat-desc">Pure HTML/CSS/JS — no frameworks, no build steps. Fork any file, tweak the prompts, and make it your own in minutes.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════
+       API NOTICE
+  ══════════════════════════════════════ -->
+  <div class="api-notice reveal" id="tools">
+    <div class="api-notice-inner">
+      <div class="api-notice-icon">🔑</div>
+      <div class="api-notice-body">
+        <div class="api-notice-title">RouteAPI Key Required for All Tools</div>
+        <div class="api-notice-desc">Each tool has a built-in API key field at the top. Enter your key — it stays in memory only and is never stored or transmitted.</div>
+      </div>
+      <div class="api-notice-badge">
+        <span>🛡</span> Local &amp; Secure
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       TOOLS GRID
+  ══════════════════════════════════════ -->
+  <section class="tools-section">
+    <div class="section-label" style="margin-bottom:16px;">
+      <div class="section-label-line"></div>
+      <span class="section-label-text">The Toolkit</span>
+      <div class="section-label-line r"></div>
+    </div>
+    <h2 class="section-title reveal">10 Tools. One Platform.</h2>
+    <p class="section-sub reveal">Click any card to launch the tool instantly. Each project teaches a unique AI skill.</p>
+
+    <div class="tools-grid">
+
+      <!-- Task 1 -->
+      <a href="task1-resume-builder.html" class="tool-card t1 reveal reveal-delay-1">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">📄</div>
+            <span class="card-badge">Task 01</span>
+          </div>
+          <div class="card-title">AI Resume Builder</div>
+          <div class="card-desc">Fill in your name, education, skills, and experience — AI instantly generates a polished, professional resume you can download or print.</div>
+          <div class="card-tags">
+            <span class="tag">Form Handling</span>
+            <span class="tag">Prompt Design</span>
+            <span class="tag">PDF Export</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 Form & API basics</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 2 -->
+      <a href="task2-notes-generator.html" class="tool-card t2 reveal reveal-delay-2">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">📝</div>
+            <span class="card-badge">Task 02</span>
+          </div>
+          <div class="card-title">AI Notes Generator</div>
+          <div class="card-desc">Paste any textbook paragraph or topic — AI converts it into clean, structured, bullet-point study notes rendered in Markdown.</div>
+          <div class="card-tags">
+            <span class="tag">Summarization</span>
+            <span class="tag">Markdown</span>
+            <span class="tag">Copy & Download</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 Prompt engineering</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 3 -->
+      <a href="task3-ppt-generator.html" class="tool-card t3 reveal reveal-delay-3">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">🎞️</div>
+            <span class="card-badge">Task 03</span>
+          </div>
+          <div class="card-title">AI PPT Generator</div>
+          <div class="card-desc">Enter a topic and AI generates 6 complete slides with titles and bullet points, displayed as a navigable interactive slideshow.</div>
+          <div class="card-tags">
+            <span class="tag">JSON Parsing</span>
+            <span class="tag">Dynamic DOM</span>
+            <span class="tag">Slideshow</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 JSON & DOM generation</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 4 -->
+      <a href="task4-mind-map.html" class="tool-card t4 reveal reveal-delay-1">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">🗺️</div>
+            <span class="card-badge">Task 04</span>
+          </div>
+          <div class="card-title">AI Mind Map Generator</div>
+          <div class="card-desc">Paste your syllabus and AI breaks it into a hierarchical structure rendered as a visual, pan-and-zoom SVG mind map with color nodes.</div>
+          <div class="card-tags">
+            <span class="tag">SVG Canvas</span>
+            <span class="tag">Hierarchical Data</span>
+            <span class="tag">Zoom / Pan</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 Data visualization</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 5 -->
+      <a href="task5-google-sheets.html" class="tool-card t5 reveal reveal-delay-2">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">📊</div>
+            <span class="card-badge">Task 05</span>
+          </div>
+          <div class="card-title">Google Sheets Backend</div>
+          <div class="card-desc">Use Google Sheets as a live database. Read and display data in a table, and submit new rows via a POST request — no backend needed.</div>
+          <div class="card-tags">
+            <span class="tag">Apps Script</span>
+            <span class="tag">Fetch API</span>
+            <span class="tag">Live Data</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 REST API integration</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 6 -->
+      <a href="task6-quiz-generator.html" class="tool-card t6 reveal reveal-delay-3">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">🧠</div>
+            <span class="card-badge">Task 06</span>
+          </div>
+          <div class="card-title">AI Quiz / MCQ Generator</div>
+          <div class="card-desc">Enter a topic and AI generates 5–10 multiple-choice questions. Answer them interactively, see instant feedback, and get a final score.</div>
+          <div class="card-tags">
+            <span class="tag">JSON Output</span>
+            <span class="tag">Interactive UI</span>
+            <span class="tag">Score Tracking</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 Stateful interactivity</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 7 -->
+      <a href="task7-chatbot.html" class="tool-card t7 reveal reveal-delay-1">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">💬</div>
+            <span class="card-badge">Task 07</span>
+          </div>
+          <div class="card-title">AI Subject Chatbot</div>
+          <div class="card-desc">A subject-specific AI tutor with conversation history, typing indicators, and Markdown-rendered responses — just like a real chat app.</div>
+          <div class="card-tags">
+            <span class="tag">Chat UI</span>
+            <span class="tag">State Management</span>
+            <span class="tag">History</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 Conversational AI</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 8 -->
+      <a href="task8-flashcards.html" class="tool-card t8 reveal reveal-delay-2">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">🃏</div>
+            <span class="card-badge">Task 08</span>
+          </div>
+          <div class="card-title">AI Flashcard Generator</div>
+          <div class="card-desc">Paste a chapter and AI creates Q&A flashcards with a stunning 3D CSS flip animation. Shuffle, navigate, and use keyboard shortcuts.</div>
+          <div class="card-tags">
+            <span class="tag">3D CSS Flip</span>
+            <span class="tag">Animation</span>
+            <span class="tag">Keyboard Nav</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 CSS 3D & state</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 9 -->
+      <a href="task9-study-planner.html" class="tool-card t9 reveal reveal-delay-3">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">📅</div>
+            <span class="card-badge">Task 09</span>
+          </div>
+          <div class="card-title">AI Study Planner</div>
+          <div class="card-desc">Enter your subjects, daily hours, and exam dates — AI generates a balanced, color-coded weekly timetable grid. Printable in one click.</div>
+          <div class="card-tags">
+            <span class="tag">Grid Layout</span>
+            <span class="tag">Scheduling</span>
+            <span class="tag">Color Coded</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 Grid UI & AI scheduling</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Task 10 -->
+      <a href="task10-ocr-summarizer.html" class="tool-card t10 reveal reveal-delay-1">
+        <div class="card-accent-bar"></div>
+        <div class="card-body">
+          <div class="card-head">
+            <div class="card-icon-wrap">📷</div>
+            <span class="card-badge">Task 10</span>
+          </div>
+          <div class="card-title">AI Notes from Photos</div>
+          <div class="card-desc">Upload a photo of handwritten or printed notes. Tesseract.js OCR extracts the text, then AI condenses it into structured study notes.</div>
+          <div class="card-tags">
+            <span class="tag">Tesseract.js OCR</span>
+            <span class="tag">Image Upload</span>
+            <span class="tag">Summarization</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-learning">📚 OCR + AI pipeline</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════ -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="footer-logo-mark">🎓</div>
+          <span class="footer-logo-text">Edu<span>AI</span> Studio</span>
+        </div>
+        <p class="footer-tagline">A premium suite of AI-powered student tools built with vanilla HTML, CSS, JS, and RouteAPI.</p>
+      </div>
+
+      <div class="footer-links-group">
+        <div class="footer-links-title">Tools</div>
+        <ul class="footer-links">
+          <li><a href="task1-resume-builder.html">AI Resume Builder</a></li>
+          <li><a href="task2-notes-generator.html">Notes Generator</a></li>
+          <li><a href="task3-ppt-generator.html">PPT Generator</a></li>
+          <li><a href="task4-mind-map.html">Mind Map</a></li>
+          <li><a href="task5-google-sheets.html">Sheets Backend</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-links-group">
+        <div class="footer-links-title">More Tools</div>
+        <ul class="footer-links">
+          <li><a href="task6-quiz-generator.html">Quiz Generator</a></li>
+          <li><a href="task7-chatbot.html">AI Chatbot</a></li>
+          <li><a href="task8-flashcards.html">Flashcards</a></li>
+          <li><a href="task9-study-planner.html">Study Planner</a></li>
+          <li><a href="task10-ocr-summarizer.html">OCR + AI Summarizer</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-links-group">
+        <div class="footer-links-title">Resources</div>
+        <ul class="footer-links">
+          <li><a href="https://www.routeapi.ai/console/token" target="_blank">Get RouteAPI Key</a></li>
+          <li><a href="https://www.routeapi.ai/console/token" target="_blank">RouteAPI Docs</a></li>
+          <li><a href="https://developers.google.com/apps-script" target="_blank">Apps Script Guide</a></li>
+          <li><a href="https://tesseract.projectnaptha.com/" target="_blank">Tesseract.js</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 EduAI Studio · 10 In-Class AI Tasks for Students</span>
+      <div class="footer-tech">
+        Built with
+        <span class="tech-pill">HTML</span>
+        <span class="tech-pill">CSS</span>
+        <span class="tech-pill">JavaScript</span>
+        <span class="tech-pill">RouteAPI</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ══════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════ -->
+  <script>
+    /* ── Navbar scroll effect ── */
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    }, { passive: true });
+
+    /* ── Particle canvas ── */
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let W, H;
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+        this.r = Math.random() * 1.4 + 0.3;
+        this.alpha = Math.random() * 0.45 + 0.05;
+        this.vx = (Math.random() - 0.5) * 0.18;
+        this.vy = (Math.random() - 0.5) * 0.18;
+        const palette = ['#7c3aed','#2563eb','#06b6d4','#a78bfa','#60a5fa'];
+        this.color = palette[Math.floor(Math.random() * palette.length)];
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+      }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    const COUNT = 120;
+    for (let i = 0; i < COUNT; i++) particles.push(new Particle());
+
+    /* Draw faint connecting lines between close particles */
+    function drawLines() {
+      const MAX_DIST = 130;
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < MAX_DIST) {
+            ctx.save();
+            ctx.globalAlpha = (1 - dist / MAX_DIST) * 0.06;
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, W, H);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawLines();
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    /* ── Animated counter ── */
+    function animateCounter(el, target, suffix = '') {
+      const start = performance.now();
+      const duration = 1600;
+      function update(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const val = Math.round(ease * target);
+        el.textContent = val + suffix;
+        if (t < 1) requestAnimationFrame(update);
+        else el.textContent = target + suffix;
+      }
+      requestAnimationFrame(update);
+    }
+
+    /* ── Scroll reveal + counter trigger ── */
+    const revealEls = document.querySelectorAll('.reveal');
+    let countersTriggered = false;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+
+          /* Trigger counters when stats band is visible */
+          if (!countersTriggered && entry.target.closest('.stats-band')) {
+            countersTriggered = true;
+            setTimeout(() => {
+              document.querySelectorAll('[data-count]').forEach(el => {
+                const n = parseInt(el.dataset.count);
+                if (!isNaN(n)) animateCounter(el, n, el.nextSibling?.textContent?.includes('%') ? '' : '');
+              });
+              /* Manual overrides for special values */
+              const statVals = document.querySelectorAll('.stat-value');
+              statVals[0] && animateCounter(statVals[0], 10, '');
+              statVals[1] && (statVals[1].textContent = 'gpt-4o-mini');
+              statVals[2] && animateCounter(statVals[2], 100, '%');
+              statVals[3] && (statVals[3].textContent = '0s');
+            }, 200);
+          }
+        }
+      });
+    }, { threshold: 0.12 });
+
+    revealEls.forEach(el => observer.observe(el));
+
+    /* Observe stats band children too */
+    document.querySelectorAll('.stats-band .reveal').forEach(el => observer.observe(el));
+
+    /* ── Subtle parallax on hero ── */
+    document.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 12;
+      const y = (e.clientY / window.innerHeight - 0.5) * 12;
+      document.querySelector('.hero-h1')?.style.setProperty('transform', `translate(${x*0.3}px, ${y*0.3}px)`);
+    }, { passive: true });
+  </script>
+</body>
+</html>

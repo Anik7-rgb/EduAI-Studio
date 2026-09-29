@@ -1,0 +1,263 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Notes Generator | Task 2</title>
+  <meta name="description" content="Paste any topic or paragraph and AI converts it into clean, structured study notes." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07); --accent: #10b981; --accent-light: #34d399; --text: #e2e8f0; --muted: #64748b; --radius: 14px; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #10b981; top: -150px; right: -100px; }
+    .orb-b { width: 400px; height: 400px; background: #0ea5e9; bottom: -100px; left: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .layout { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 65px); }
+    .panel { padding: 32px; overflow-y: auto; }
+    .panel-right { background: rgba(255,255,255,0.01); border-left: 1px solid var(--border); }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 20px; }
+    h2 { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    input, textarea, select {
+      width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
+    select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s; }
+    .field { margin-bottom: 18px; }
+    .api-row { display: flex; gap: 10px; }
+    .api-row input { flex: 1; }
+    .btn-load { padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.12); color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: Inter, sans-serif; transition: all 0.2s; }
+    .btn-load:hover { background: rgba(16,185,129,0.25); }
+    .btn-load:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .style-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .chip { padding: 7px 16px; border-radius: 100px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .chip.active { background: rgba(16,185,129,0.15); border-color: var(--accent); color: var(--accent-light); }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #10b981, #0ea5e9); color: #fff; width: 100%; justify-content: center; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(16,185,129,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); }
+    .btn-sm:hover { border-color: var(--accent-light); color: var(--accent-light); }
+
+    .loader { display: none; text-align: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .actions-bar { display: none; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .notes-output { display: none; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+    .notes-output h1,.notes-output h2,.notes-output h3 { color: var(--accent-light); margin-bottom: 8px; margin-top: 20px; font-family: 'Outfit', sans-serif; }
+    .notes-output h1:first-child, .notes-output h2:first-child { margin-top: 0; }
+    .notes-output ul, .notes-output ol { padding-left: 20px; color: var(--text); }
+    .notes-output li { margin-bottom: 4px; font-size: 14px; line-height: 1.7; }
+    .notes-output p { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 8px; }
+    .notes-output strong { color: #f1f5f9; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } .panel-right { border-left: none; border-top: 1px solid var(--border); } }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">📝 AI Notes Generator</span>
+  </nav>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="badge">📝 Task 2</div>
+      <h2>AI Notes Generator</h2>
+      <p class="subtitle">Paste raw topic text and get structured study notes instantly.</p>
+
+      <div class="field">
+        <label>RouteAPI Key</label>
+        <div class="api-row">
+          <input type="password" id="apiKey" placeholder="sk-..." />
+          <button type="button" onclick="loadModels()" id="testBtn" class="btn-load">🔌 Load Models</button>
+        </div>
+        <div id="connStatus" style="font-size:12px;margin-top:6px;display:none;"></div>
+      </div>
+      <div class="field">
+        <label>Model <span id="modelCount" style="color:#64748b;font-weight:400;"></span></label>
+        <select id="modelSel">
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+          <option value="openai/gpt-4o">openai/gpt-4o</option>
+          <option value="anthropic/claude-3-5-haiku">anthropic/claude-3-5-haiku</option>
+          <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+        </select>
+        <p style="font-size:11px;color:#475569;margin-top:5px;">Click "Load Models" above to fetch your actual available models.</p>
+      </div>
+      <div class="field">
+        <label>Topic Text / Paragraph</label>
+        <textarea id="topicText" style="min-height:200px;" placeholder="Paste any textbook paragraph, topic summary, or raw notes here..."></textarea>
+      </div>
+      <div class="field">
+        <label>Note Style</label>
+        <div class="style-chips">
+          <span class="chip active" onclick="selectChip(this,'bullet')">• Bullet Points</span>
+          <span class="chip" onclick="selectChip(this,'numbered')">1. Numbered</span>
+          <span class="chip" onclick="selectChip(this,'qa')">Q&A Format</span>
+          <span class="chip" onclick="selectChip(this,'summary')">Short Summary</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="genBtn" onclick="generateNotes()">✨ Generate Study Notes</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div class="panel panel-right">
+      <div id="emptyState" class="empty-state">
+        <div class="icon">📝</div>
+        <h3 style="margin-bottom:8px;font-size:16px;">Your Notes Appear Here</h3>
+        <p style="font-size:14px;max-width:260px;margin:0 auto;">Paste your content, choose a style, and click Generate.</p>
+      </div>
+      <div class="loader" id="loader"><div class="spinner"></div><p style="color:var(--muted);font-size:14px;">AI is generating your notes...</p></div>
+      <div class="actions-bar" id="actionsBar">
+        <button class="btn btn-sm" onclick="copyNotes()">📋 Copy</button>
+        <button class="btn btn-sm" onclick="downloadTxt()">⬇ .txt</button>
+        <button class="btn btn-sm" onclick="downloadMd()">📄 .md</button>
+      </div>
+      <div class="notes-output" id="notesOutput"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentStyle = 'bullet';
+    let rawNotes = '';
+
+    function selectChip(el, style) {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      currentStyle = style;
+    }
+
+    const stylePrompts = {
+      bullet: 'Convert this text into clean, structured study notes with headings (##) and bullet points. Be concise and educational.',
+      numbered: 'Convert this text into numbered study notes with headings (##) and numbered lists. Be concise and educational.',
+      qa: 'Convert this text into Q&A flashcard-style notes. Format each as:\n**Q:** [question]\n**A:** [answer]\n\nGenerate 8-12 Q&A pairs.',
+      summary: 'Write a short, structured summary of this text in bullet points under clear headings. Aim for 150-200 words.'
+    };
+
+    async function generateNotes() {
+      const key = document.getElementById('apiKey').value.trim();
+      const text = document.getElementById('topicText').value.trim();
+      if (!key) { showError('Please enter your RouteAPI Key.'); return; }
+      if (!text) { showError('Please paste some topic text to convert.'); return; }
+
+      const prompt = stylePrompts[currentStyle] + '\n\nText:\n' + text;
+      showLoader();
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model: document.getElementById('modelSel').value, messages: [{ role: 'user', content: prompt }], max_tokens: 1000 })
+        });
+        const json = await res.json();
+        if (json.error) { showError(json.error.message); return; }
+        rawNotes = json.choices[0].message.content;
+        showNotes(rawNotes);
+      } catch (e) { showError('Network error: ' + e.message); }
+    }
+
+    function showLoader() {
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('notesOutput').style.display = 'none';
+      document.getElementById('actionsBar').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('genBtn').disabled = true;
+    }
+
+    function showNotes(md) {
+      document.getElementById('loader').style.display = 'none';
+      const out = document.getElementById('notesOutput');
+      out.style.display = 'block';
+      out.innerHTML = marked.parse(md);
+      document.getElementById('actionsBar').style.display = 'flex';
+      document.getElementById('genBtn').disabled = false;
+    }
+
+    function showError(msg) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('genBtn').disabled = false;
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    function copyNotes() {
+      navigator.clipboard.writeText(rawNotes).then(() => alert('Notes copied to clipboard!'));
+    }
+    function downloadTxt() {
+      const a = document.createElement('a');
+      a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(rawNotes);
+      a.download = 'study-notes.txt'; a.click();
+    }
+    function downloadMd() {
+      const a = document.createElement('a');
+      a.href = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(rawNotes);
+      a.download = 'study-notes.md'; a.click();
+    }
+
+    async function loadModels() {
+      const key = document.getElementById('apiKey').value.trim();
+      const status = document.getElementById('connStatus');
+      const btn = document.getElementById('testBtn');
+      if (!key) { status.style.display = 'block'; status.style.color = '#f87171'; status.textContent = '⚠ Enter your API key first.'; return; }
+      status.style.display = 'block'; status.style.color = '#94a3b8'; status.textContent = '🔌 Fetching models from RouteAPI...';
+      btn.textContent = '⏳ Loading...'; btn.disabled = true;
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/models', {
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (res.ok && json.data && json.data.length > 0) {
+          const sel = document.getElementById('modelSel');
+          sel.innerHTML = '';
+          json.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.id;
+            sel.appendChild(opt);
+          });
+          const preferred = ['gpt-4o-mini', 'openai/gpt-4o-mini'];
+          for (const p of preferred) {
+            if ([...sel.options].some(o => o.value === p)) { sel.value = p; break; }
+          }
+          document.getElementById('modelCount').textContent = `(${json.data.length} available)`;
+          status.style.color = '#34d399';
+          status.textContent = `✅ Connected! ${json.data.length} models loaded. Pick one above and generate.`;
+        } else {
+          status.style.color = '#f87171';
+          status.textContent = '❌ ' + (json.error?.message || JSON.stringify(json).slice(0, 120));
+        }
+      } catch (e) {
+        status.style.color = '#f87171';
+        status.textContent = '❌ Network error: ' + e.message;
+      }
+      btn.textContent = '🔌 Load Models'; btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

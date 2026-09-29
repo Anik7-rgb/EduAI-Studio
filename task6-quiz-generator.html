@@ -1,0 +1,306 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Quiz Generator | Task 6</title>
+  <meta name="description" content="Enter a topic and AI generates an interactive multiple-choice quiz with score tracking." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07); --accent: #ef4444; --accent-light: #f87171; --text: #e2e8f0; --muted: #64748b; --radius: 14px; --green: #10b981; --red: #ef4444; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #ef4444; top: -150px; right: -100px; }
+    .orb-b { width: 400px; height: 400px; background: #f59e0b; bottom: -100px; left: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .container { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; padding: 40px 24px 80px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 20px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+    .setup-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 24px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    input, select { width: 100%; background: #0d0d1a; border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+    .field { margin-bottom: 16px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .api-row { display: flex; gap: 10px; }
+    .api-row input { flex: 1; }
+    .btn-load { padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.12); color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: Inter, sans-serif; transition: all 0.2s; }
+    .btn-load:hover { background: rgba(239,68,68,0.25); }
+    .btn-load:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #ef4444, #f59e0b); color: #fff; width: 100%; justify-content: center; margin-top: 6px; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(239,68,68,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .loader { display: none; text-align: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Quiz UI */
+    .quiz-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .quiz-progress { flex: 1; height: 6px; background: var(--border); border-radius: 100px; margin: 0 20px; overflow: hidden; }
+    .quiz-progress-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f59e0b); border-radius: 100px; transition: width 0.3s; }
+    .score-badge { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--accent-light); padding: 6px 16px; border-radius: 100px; font-size: 13px; font-weight: 700; }
+
+    .question-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; margin-bottom: 16px; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .q-num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+    .q-text { font-size: 20px; font-weight: 600; line-height: 1.5; margin-bottom: 28px; color: #f1f5f9; font-family: 'Outfit', sans-serif; }
+
+    .options { display: flex; flex-direction: column; gap: 12px; }
+    .option {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 20px; cursor: pointer;
+      font-size: 15px; color: var(--text); transition: all 0.2s;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .option:hover:not(.disabled) { border-color: var(--accent-light); background: rgba(239,68,68,0.07); transform: translateX(4px); }
+    .option.correct { background: rgba(16,185,129,0.12); border-color: #10b981; color: #34d399; }
+    .option.wrong { background: rgba(239,68,68,0.12); border-color: #ef4444; color: #f87171; }
+    .option.disabled { cursor: not-allowed; }
+    .option-letter { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+
+    .result-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 48px; text-align: center; display: none; }
+    .result-score { font-family: 'Outfit', sans-serif; font-size: 72px; font-weight: 800; background: linear-gradient(135deg, #ef4444, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .result-label { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+    .result-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+
+    @media (max-width: 600px) { .row2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">🧠 AI Quiz Generator</span>
+  </nav>
+
+  <div class="container">
+    <div class="badge">🧠 Task 6</div>
+    <h1>AI Quiz Generator</h1>
+    <p class="subtitle">Enter a topic and get an interactive MCQ quiz generated by AI. Track your score in real-time.</p>
+
+    <div class="setup-panel" id="setupPanel">
+      <div class="field">
+        <label>RouteAPI Key</label>
+        <div class="api-row">
+          <input type="password" id="apiKey" placeholder="sk-..." />
+          <button type="button" onclick="loadModels()" id="testBtn" class="btn-load">🔌 Load Models</button>
+        </div>
+        <div id="connStatus" style="font-size:12px;margin-top:6px;display:none;"></div>
+      </div>
+      <div class="field">
+        <label>Model <span id="modelCount" style="color:#64748b;font-weight:400;"></span></label>
+        <select id="modelSel">
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+          <option value="openai/gpt-4o">openai/gpt-4o</option>
+          <option value="anthropic/claude-3-5-haiku">anthropic/claude-3-5-haiku</option>
+          <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+        </select>
+        <p style="font-size:11px;color:#475569;margin-top:5px;">Click "Load Models" above to fetch your actual available models.</p>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Topic</label>
+          <input type="text" id="topic" placeholder="e.g. World War 2, Python Basics..." />
+        </div>
+        <div class="field">
+          <label>Number of Questions</label>
+          <select id="numQ">
+            <option value="5">5 Questions</option>
+            <option value="7" selected>7 Questions</option>
+            <option value="10">10 Questions</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="genBtn" onclick="generateQuiz()">✨ Generate Quiz</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div class="loader" id="loader"><div class="spinner"></div><p style="color:var(--muted);font-size:14px;">AI is crafting your quiz...</p></div>
+
+    <div id="quizArea" style="display:none;">
+      <div class="quiz-header">
+        <span id="qCounter" style="font-size:13px;color:var(--muted);font-weight:600;">Q 1/7</span>
+        <div class="quiz-progress"><div class="quiz-progress-fill" id="progressFill" style="width:0%"></div></div>
+        <span class="score-badge" id="scoreDisplay">Score: 0</span>
+      </div>
+      <div class="question-card" id="questionCard"></div>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="result-score" id="finalScore">0/7</div>
+      <div class="result-label" id="resultLabel">Great Job!</div>
+      <div class="result-sub" id="resultSub">You completed the quiz.</div>
+      <button class="btn btn-primary" style="width:auto;margin:0 auto;" onclick="restartQuiz()">🔄 Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    let questions = [], current = 0, score = 0;
+
+    async function generateQuiz() {
+      const key = document.getElementById('apiKey').value.trim();
+      const topic = document.getElementById('topic').value.trim();
+      const n = document.getElementById('numQ').value;
+      if (!key) { showError('Please enter your RouteAPI Key.'); return; }
+      if (!topic) { showError('Please enter a topic.'); return; }
+
+      const prompt = `Generate ${n} multiple-choice quiz questions on the topic: "${topic}".
+Return ONLY a valid JSON array. Each element:
+{
+  "question": "...",
+  "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+  "answer": "A"
+}
+The "answer" field is just the letter (A, B, C, or D). Return only the JSON array, no markdown.`;
+
+      document.getElementById('setupPanel').style.display = 'none';
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('genBtn').disabled = true;
+
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model: document.getElementById('modelSel').value, messages: [{ role: 'user', content: prompt }], max_tokens: 1500 })
+        });
+        const json = await res.json();
+        if (json.error) { showSetupError(json.error.message); return; }
+        let raw = json.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
+        questions = JSON.parse(raw);
+        current = 0; score = 0;
+        startQuiz();
+      } catch (e) { showSetupError('Error: ' + e.message); }
+    }
+
+    function startQuiz() {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('quizArea').style.display = 'block';
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const q = questions[current];
+      const total = questions.length;
+      document.getElementById('qCounter').textContent = `Q ${current+1}/${total}`;
+      document.getElementById('progressFill').style.width = ((current / total) * 100) + '%';
+      document.getElementById('scoreDisplay').textContent = 'Score: ' + score;
+
+      const letters = ['A','B','C','D'];
+      const card = document.getElementById('questionCard');
+      card.innerHTML = `
+        <div class="q-num">Question ${current+1} of ${total}</div>
+        <div class="q-text">${q.question}</div>
+        <div class="options" id="optionsEl">
+          ${q.options.map((opt, i) => `
+            <div class="option" id="opt${i}" onclick="selectAnswer(${i}, '${letters[i]}', '${q.answer}')">
+              <div class="option-letter">${letters[i]}</div>
+              <span>${opt.replace(/^[A-D]\.\s?/,'')}</span>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    function selectAnswer(idx, chosen, correct) {
+      document.querySelectorAll('.option').forEach(el => el.classList.add('disabled'));
+      const chosenEl = document.getElementById('opt' + idx);
+      const letters = ['A','B','C','D'];
+      const correctIdx = letters.indexOf(correct);
+      if (chosen === correct) { chosenEl.classList.add('correct'); score++; }
+      else { chosenEl.classList.add('wrong'); document.getElementById('opt' + correctIdx)?.classList.add('correct'); }
+      document.getElementById('scoreDisplay').textContent = 'Score: ' + score;
+      setTimeout(() => {
+        current++;
+        if (current < questions.length) showQuestion();
+        else showResult();
+      }, 1200);
+    }
+
+    function showResult() {
+      document.getElementById('quizArea').style.display = 'none';
+      const panel = document.getElementById('resultPanel');
+      panel.style.display = 'block';
+      const pct = Math.round((score / questions.length) * 100);
+      document.getElementById('finalScore').textContent = `${score}/${questions.length}`;
+      document.getElementById('resultLabel').textContent = pct >= 80 ? '🌟 Excellent!' : pct >= 60 ? '👍 Good Job!' : '💪 Keep Practicing!';
+      document.getElementById('resultSub').textContent = `You scored ${pct}% on this quiz.`;
+      document.getElementById('progressFill').style.width = '100%';
+    }
+
+    function restartQuiz() {
+      document.getElementById('resultPanel').style.display = 'none';
+      document.getElementById('setupPanel').style.display = 'block';
+      document.getElementById('genBtn').disabled = false;
+    }
+
+    function showSetupError(msg) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('setupPanel').style.display = 'block';
+      document.getElementById('genBtn').disabled = false;
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    async function loadModels() {
+      const key = document.getElementById('apiKey').value.trim();
+      const status = document.getElementById('connStatus');
+      const btn = document.getElementById('testBtn');
+      if (!key) { status.style.display = 'block'; status.style.color = '#f87171'; status.textContent = '⚠ Enter your API key first.'; return; }
+      status.style.display = 'block'; status.style.color = '#94a3b8'; status.textContent = '🔌 Fetching models from RouteAPI...';
+      btn.textContent = '⏳ Loading...'; btn.disabled = true;
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/models', {
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (res.ok && json.data && json.data.length > 0) {
+          const sel = document.getElementById('modelSel');
+          sel.innerHTML = '';
+          json.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.id;
+            sel.appendChild(opt);
+          });
+          const preferred = ['gpt-4o-mini', 'openai/gpt-4o-mini'];
+          for (const p of preferred) {
+            if ([...sel.options].some(o => o.value === p)) { sel.value = p; break; }
+          }
+          document.getElementById('modelCount').textContent = `(${json.data.length} available)`;
+          status.style.color = '#34d399';
+          status.textContent = `✅ Connected! ${json.data.length} models loaded. Pick one above and generate.`;
+        } else {
+          status.style.color = '#f87171';
+          status.textContent = '❌ ' + (json.error?.message || JSON.stringify(json).slice(0, 120));
+        }
+      } catch (e) {
+        status.style.color = '#f87171';
+        status.textContent = '❌ Network error: ' + e.message;
+      }
+      btn.textContent = '🔌 Load Models'; btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

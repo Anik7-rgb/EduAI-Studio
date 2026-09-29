@@ -1,0 +1,271 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Resume Builder | Task 1</title>
+  <meta name="description" content="Fill in your details and AI generates a polished, professional resume instantly." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07);
+      --accent: #7c3aed; --accent-light: #a78bfa; --text: #e2e8f0; --muted: #64748b; --radius: 14px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #7c3aed; top: -150px; left: -150px; }
+    .orb-b { width: 400px; height: 400px; background: #2563eb; bottom: -100px; right: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .layout { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-height: calc(100vh - 65px); }
+
+    .panel-left { padding: 32px; overflow-y: auto; border-right: 1px solid var(--border); }
+    .panel-right { padding: 32px; overflow-y: auto; background: rgba(255,255,255,0.01); }
+
+    h2 { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 20px; }
+
+    .api-row { display: flex; gap: 10px; margin-bottom: 24px; }
+    .api-row input { flex: 1; }
+
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    input, textarea, select {
+      width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px;
+      padding: 12px 14px; outline: none; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+    textarea { resize: vertical; min-height: 80px; }
+    .field { margin-bottom: 18px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
+      border-radius: 12px; border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 600; transition: all 0.2s;
+    }
+    .btn-primary { background: linear-gradient(135deg, #7c3aed, #2563eb); color: #fff; width: 100%; justify-content: center; margin-top: 8px; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,0.35); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 10px 18px; font-size: 13px; border-radius: 10px; }
+    .btn-outline:hover { border-color: var(--accent-light); color: var(--accent-light); }
+
+    .loader { display: none; text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .resume-preview {
+      background: #ffffff; color: #1a1a2e; border-radius: var(--radius);
+      padding: 40px 44px; font-family: 'Georgia', serif; font-size: 14px; line-height: 1.7;
+      white-space: pre-wrap; display: none; box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+    }
+    .preview-actions { display: none; gap: 10px; margin-bottom: 16px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 14px; max-width: 260px; margin: 0 auto; }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } .panel-left { border-right: none; border-bottom: 1px solid var(--border); } }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">📄 AI Resume Builder</span>
+  </nav>
+
+  <div class="layout">
+    <div class="panel-left">
+      <div class="badge">📄 Task 1</div>
+      <h2>Build Your Resume</h2>
+
+      <div class="field">
+        <label>RouteAPI Key</label>
+        <div class="api-row">
+          <input type="password" id="apiKey" placeholder="sk-..." />
+          <button onclick="loadModels()" id="testBtn" style="padding:10px 16px;border-radius:10px;border:1px solid rgba(124,58,237,0.3);background:rgba(124,58,237,0.12);color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:Inter,sans-serif;transition:all 0.2s;" onmouseover="this.style.background='rgba(124,58,237,0.25)'" onmouseout="this.style.background='rgba(124,58,237,0.12)'">🔌 Load Models</button>
+        </div>
+        <div id="connStatus" style="font-size:12px;margin-top:6px;display:none;"></div>
+      </div>
+      <div class="field">
+        <label>Model <span id="modelCount" style="color:#64748b;font-weight:400;"></span></label>
+        <select id="modelSel" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,0.07);border-radius:10px;color:#e2e8f0;font-family:Inter,sans-serif;font-size:14px;padding:12px 14px;outline:none;">
+          <option value="gpt-4o-mini">openai/gpt-4o-mini</option>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="openai/gpt-4o">openai/gpt-4o</option>
+          <option value="anthropic/claude-3-5-haiku">anthropic/claude-3-5-haiku</option>
+          <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+        </select>
+        <p style="font-size:11px;color:#475569;margin-top:5px;">Click "Load Models" above to fetch your actual available models.</p>
+      </div>
+
+      <div class="row2">
+        <div class="field"><label>Full Name</label><input type="text" id="name" placeholder="John Doe" /></div>
+        <div class="field"><label>Email</label><input type="email" id="email" placeholder="john@example.com" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Phone</label><input type="text" id="phone" placeholder="+1 234 567 8900" /></div>
+        <div class="field"><label>Location</label><input type="text" id="location" placeholder="New York, NY" /></div>
+      </div>
+      <div class="field"><label>Professional Objective</label><textarea id="objective" placeholder="Brief summary of your career goals..."></textarea></div>
+      <div class="field"><label>Education</label><textarea id="education" placeholder="B.Tech Computer Science, ABC University, 2020-2024&#10;GPA: 3.8/4.0"></textarea></div>
+      <div class="field"><label>Work Experience</label><textarea id="experience" placeholder="Software Intern at XYZ Corp (2023)&#10;- Developed REST APIs using Node.js..."></textarea></div>
+      <div class="field"><label>Skills</label><textarea id="skills" placeholder="JavaScript, Python, React, Node.js, SQL, Git..." style="min-height:60px"></textarea></div>
+      <div class="field"><label>Certifications / Achievements</label><textarea id="certs" placeholder="AWS Certified Developer, Hackathon Winner 2023..." style="min-height:60px"></textarea></div>
+
+      <button class="btn btn-primary" id="generateBtn" onclick="generateResume()">✨ Generate Resume with AI</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div class="panel-right">
+      <div id="emptyState" class="empty-state">
+        <div class="icon">📄</div>
+        <h3 style="margin-bottom:8px;font-size:16px;">Your Resume Preview</h3>
+        <p>Fill in your details and click "Generate Resume" to see your AI-crafted resume here.</p>
+      </div>
+      <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <p style="color:var(--muted);font-size:14px;">AI is crafting your resume...</p>
+      </div>
+      <div class="preview-actions" id="previewActions">
+        <button class="btn btn-outline" onclick="downloadTxt()">⬇ Download .txt</button>
+        <button class="btn btn-outline" onclick="printResume()">🖨 Print / Save PDF</button>
+      </div>
+      <div class="resume-preview" id="resumePreview"></div>
+    </div>
+  </div>
+
+  <script>
+    async function generateResume() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) { showError('Please enter your RouteAPI Key.'); return; }
+
+      const data = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        location: document.getElementById('location').value,
+        objective: document.getElementById('objective').value,
+        education: document.getElementById('education').value,
+        experience: document.getElementById('experience').value,
+        skills: document.getElementById('skills').value,
+        certs: document.getElementById('certs').value,
+      };
+
+      const prompt = `Write a professional resume for the following person. Format it clearly with sections: Contact Info, Professional Objective, Education, Work Experience, Skills, and Certifications/Achievements. Use clean formatting with dashes and spacing.
+
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
+Location: ${data.location}
+Objective: ${data.objective}
+Education: ${data.education}
+Work Experience: ${data.experience}
+Skills: ${data.skills}
+Certifications / Achievements: ${data.certs}
+
+Write the full resume text now:`;
+
+      showLoader();
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model: document.getElementById('modelSel').value, messages: [{ role: 'user', content: prompt }], max_tokens: 1200 })
+        });
+        const json = await res.json();
+        if (json.error) { showError(json.error.message); return; }
+        const text = json.choices[0].message.content;
+        showResume(text);
+      } catch (e) { showError('Network error: ' + e.message); }
+    }
+
+    async function loadModels() {
+      const key = document.getElementById('apiKey').value.trim();
+      const status = document.getElementById('connStatus');
+      const btn = document.getElementById('testBtn');
+      if (!key) { status.style.display='block'; status.style.color='#f87171'; status.textContent='⚠ Enter your API key first.'; return; }
+      status.style.display='block'; status.style.color='#94a3b8'; status.textContent='🔌 Fetching models from RouteAPI...';
+      btn.textContent = '⏳ Loading...'; btn.disabled = true;
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/models', {
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (res.ok && json.data && json.data.length > 0) {
+          const sel = document.getElementById('modelSel');
+          sel.innerHTML = '';
+          json.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.id;
+            sel.appendChild(opt);
+          });
+          // Try to pre-select gpt-4o-mini if available
+          const preferred = ['gpt-4o-mini','gpt-4o-mini'];
+          for (const p of preferred) {
+            if ([...sel.options].some(o => o.value === p)) { sel.value = p; break; }
+          }
+          document.getElementById('modelCount').textContent = `(${json.data.length} available)`;
+          status.style.color='#34d399';
+          status.textContent=`✅ Connected! ${json.data.length} models loaded. Pick one above and generate.`;
+        } else {
+          status.style.color='#f87171';
+          status.textContent='❌ ' + (json.error?.message || JSON.stringify(json).slice(0,120));
+        }
+      } catch(e) {
+        status.style.color='#f87171';
+        status.textContent='❌ Network error: ' + e.message;
+      }
+      btn.textContent = '🔌 Load Models'; btn.disabled = false;
+    }
+
+    function showLoader() {
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('resumePreview').style.display = 'none';
+      document.getElementById('previewActions').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('generateBtn').disabled = true;
+    }
+
+    function showResume(text) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('resumePreview').style.display = 'block';
+      document.getElementById('resumePreview').textContent = text;
+      document.getElementById('previewActions').style.display = 'flex';
+      document.getElementById('generateBtn').disabled = false;
+    }
+
+    function showError(msg) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('generateBtn').disabled = false;
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    function downloadTxt() {
+      const text = document.getElementById('resumePreview').textContent;
+      const a = document.createElement('a');
+      a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
+      a.download = 'resume.txt';
+      a.click();
+    }
+
+    function printResume() { window.print(); }
+  </script>
+</body>
+</html>

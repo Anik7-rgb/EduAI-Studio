@@ -1,0 +1,337 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Notes from Photos | Task 10</title>
+  <meta name="description" content="Upload a photo of handwritten notes — OCR extracts the text and AI summarizes it." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07); --accent: #6366f1; --accent-light: #818cf8; --text: #e2e8f0; --muted: #64748b; --radius: 14px; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #6366f1; top: -150px; left: -100px; }
+    .orb-b { width: 400px; height: 400px; background: #a855f7; bottom: -100px; right: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .layout { position: relative; z-index: 1; display: grid; grid-template-columns: 420px 1fr; min-height: calc(100vh - 65px); }
+    .panel { padding: 32px; overflow-y: auto; }
+    .panel-right { border-left: 1px solid var(--border); background: rgba(255,255,255,0.01); }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 20px; }
+    h2 { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    input[type="password"], select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+    .field { margin-bottom: 16px; }
+    .api-row { display: flex; gap: 10px; }
+    .api-row input[type="password"] { flex: 1; width: auto; }
+    .btn-load { padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.12); color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: Inter, sans-serif; transition: all 0.2s; }
+    .btn-load:hover { background: rgba(99,102,241,0.25); }
+    .btn-load:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed rgba(99,102,241,0.35); border-radius: 16px;
+      padding: 40px 20px; text-align: center; cursor: pointer;
+      transition: all 0.2s; margin-bottom: 16px; position: relative;
+      background: rgba(99,102,241,0.04);
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: rgba(99,102,241,0.1); }
+    .upload-zone .icon { font-size: 44px; margin-bottom: 12px; }
+    .upload-zone h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .upload-zone p { font-size: 13px; color: var(--muted); }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+    .preview-img { width: 100%; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; display: none; max-height: 260px; object-fit: contain; background: #0d0d1a; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff; width: 100%; justify-content: center; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-sm { padding: 9px 18px; font-size: 13px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 10px; }
+    .btn-sm:hover { border-color: var(--accent-light); color: var(--accent-light); }
+
+    /* Progress */
+    .progress-area { display: none; margin-bottom: 20px; }
+    .progress-step { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .step-idle { background: rgba(255,255,255,0.06); color: var(--muted); }
+    .step-loading { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.4); }
+    .step-done { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); }
+    .step-label { font-size: 13px; color: var(--text); }
+    .step-sub { font-size: 11px; color: var(--muted); }
+    .spinner-sm { width: 14px; height: 14px; border: 2px solid rgba(99,102,241,0.3); border-top-color: var(--accent-light); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Right panel */
+    .section-title { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 16px; color: var(--accent-light); }
+    .text-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; font-size: 13px; line-height: 1.75; color: #94a3b8; white-space: pre-wrap; max-height: 280px; overflow-y: auto; display: none; margin-bottom: 24px; }
+    .notes-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: none; margin-bottom: 16px; }
+    .notes-block h1,.notes-block h2,.notes-block h3 { color: var(--accent-light); font-size: 15px; margin-bottom: 6px; margin-top: 14px; }
+    .notes-block h1:first-child,.notes-block h2:first-child { margin-top: 0; }
+    .notes-block ul,.notes-block ol { padding-left: 20px; }
+    .notes-block li { margin-bottom: 4px; font-size: 13px; line-height: 1.7; }
+    .notes-block p { font-size: 13px; margin-bottom: 6px; line-height: 1.7; }
+    .notes-block strong { color: #f1f5f9; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 56px; margin-bottom: 16px; }
+    .actions-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; display: none; }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } .panel-right { border-left: none; border-top: 1px solid var(--border); } }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">📷 AI Notes from Photos</span>
+  </nav>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="badge">📷 Task 10</div>
+      <h2>AI Notes from Photos</h2>
+      <p class="subtitle">Upload a photo of handwritten/printed notes — OCR extracts text, AI summarizes it.</p>
+
+      <div class="field">
+        <label>RouteAPI Key</label>
+        <div class="api-row">
+          <input type="password" id="apiKey" placeholder="sk-..." />
+          <button type="button" onclick="loadModels()" id="testBtn" class="btn-load">🔌 Load Models</button>
+        </div>
+        <div id="connStatus" style="font-size:12px;margin-top:6px;display:none;"></div>
+      </div>
+      <div class="field">
+        <label>Model <span id="modelCount" style="color:#64748b;font-weight:400;"></span></label>
+        <select id="modelSel">
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+          <option value="openai/gpt-4o">openai/gpt-4o</option>
+          <option value="anthropic/claude-3-5-haiku">anthropic/claude-3-5-haiku</option>
+          <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+        </select>
+        <p style="font-size:11px;color:#475569;margin-top:5px;">Click "Load Models" above to fetch your actual available models.</p>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile(this.files[0])" />
+        <div class="icon">📷</div>
+        <h3>Upload Image</h3>
+        <p>Drag & drop or click to upload JPG, PNG, or HEIC</p>
+      </div>
+
+      <img id="previewImg" class="preview-img" alt="Uploaded image preview" />
+
+      <div class="field">
+        <label>Summary Style</label>
+        <select id="summaryStyle">
+          <option value="bullet">Bullet Point Notes</option>
+          <option value="short">Short Summary</option>
+          <option value="qa">Q&A Flashcard Format</option>
+          <option value="detailed">Detailed Explanation</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" id="processBtn" onclick="processImage()" disabled>🔍 Extract & Summarize</button>
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="progress-area" id="progressArea">
+        <div class="progress-step" id="step1">
+          <div class="step-icon step-idle" id="step1Icon">1</div>
+          <div><div class="step-label">OCR: Extracting text from image</div><div class="step-sub" id="step1Sub">Waiting...</div></div>
+        </div>
+        <div class="progress-step" id="step2">
+          <div class="step-icon step-idle" id="step2Icon">2</div>
+          <div><div class="step-label">AI: Summarizing extracted text</div><div class="step-sub" id="step2Sub">Waiting...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-right">
+      <div id="emptyState" class="empty-state">
+        <div class="icon">🔍</div>
+        <h3 style="margin-bottom:8px;font-size:16px;">Results Appear Here</h3>
+        <p style="font-size:14px;max-width:300px;margin:0 auto;">Upload an image of notes, then click Extract & Summarize. OCR will read the text, AI will turn it into structured notes.</p>
+      </div>
+
+      <div id="extractedSection" style="display:none;">
+        <div class="section-title">📄 Extracted Text (OCR)</div>
+        <div class="text-block" id="extractedText"></div>
+      </div>
+
+      <div id="summarySection" style="display:none;">
+        <div class="section-title">✨ AI Summary / Notes</div>
+        <div class="actions-row" id="actionsRow">
+          <button class="btn btn-sm" onclick="copyNotes()">📋 Copy</button>
+          <button class="btn btn-sm" onclick="downloadNotes()">⬇ Download</button>
+        </div>
+        <div class="notes-block" id="notesBlock"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script>
+    let uploadedFile = null;
+    let rawNotes = '';
+
+    function handleFile(file) {
+      if (!file) return;
+      uploadedFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById('previewImg');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        document.getElementById('processBtn').disabled = false;
+        document.getElementById('uploadZone').querySelector('h3').textContent = file.name;
+        document.getElementById('uploadZone').querySelector('p').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    const zone = document.getElementById('uploadZone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+
+    async function processImage() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) { showError('Please enter your RouteAPI Key.'); return; }
+      if (!uploadedFile) { showError('Please upload an image first.'); return; }
+
+      document.getElementById('processBtn').disabled = true;
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('extractedSection').style.display = 'none';
+      document.getElementById('summarySection').style.display = 'none';
+      document.getElementById('progressArea').style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'none';
+
+      setStep(1, 'loading', 'Running Tesseract.js OCR...');
+      try {
+        const result = await Tesseract.recognize(uploadedFile, 'eng', {
+          logger: m => { if (m.status === 'recognizing text') setStep(1, 'loading', `${Math.round(m.progress * 100)}% complete`); }
+        });
+        const extracted = result.data.text.trim();
+        setStep(1, 'done', `${extracted.split(' ').length} words extracted`);
+
+        document.getElementById('extractedText').textContent = extracted || 'No text found in image.';
+        document.getElementById('extractedText').style.display = 'block';
+        document.getElementById('extractedSection').style.display = 'block';
+
+        if (!extracted) { setStep(2, 'idle', 'Skipped — no text found'); document.getElementById('processBtn').disabled = false; return; }
+
+        setStep(2, 'loading', 'Sending to RouteAPI...');
+        const style = document.getElementById('summaryStyle').value;
+        const stylePrompts = {
+          bullet: 'Convert this extracted text into clean structured study notes with headings and bullet points.',
+          short: 'Write a concise summary (150-200 words) of this extracted text.',
+          qa: 'Convert this extracted text into Q&A flashcard format with 6-10 pairs.',
+          detailed: 'Provide a detailed explanation and expansion of the key concepts in this extracted text.'
+        };
+
+        const res = await fetch('https://api.routeapi.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model: document.getElementById('modelSel').value, messages: [{ role: 'user', content: stylePrompts[style] + '\n\nExtracted Text:\n' + extracted }], max_tokens: 900 })
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error.message);
+        rawNotes = json.choices[0].message.content;
+        setStep(2, 'done', 'Summary ready!');
+
+        document.getElementById('notesBlock').innerHTML = marked.parse(rawNotes);
+        document.getElementById('notesBlock').style.display = 'block';
+        document.getElementById('actionsRow').style.display = 'flex';
+        document.getElementById('summarySection').style.display = 'block';
+      } catch (e) { showError('Error: ' + e.message); }
+      document.getElementById('processBtn').disabled = false;
+    }
+
+    function setStep(num, state, sub) {
+      const icon = document.getElementById('step' + num + 'Icon');
+      const subEl = document.getElementById('step' + num + 'Sub');
+      icon.className = 'step-icon';
+      if (state === 'loading') {
+        icon.innerHTML = '<div class="spinner-sm"></div>';
+        icon.classList.add('step-loading');
+      } else if (state === 'done') {
+        icon.textContent = '✓';
+        icon.classList.add('step-done');
+      } else {
+        icon.textContent = num;
+        icon.classList.add('step-idle');
+      }
+      if (subEl) subEl.textContent = sub;
+    }
+
+    function showError(msg) {
+      document.getElementById('processBtn').disabled = false;
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    function copyNotes() { navigator.clipboard.writeText(rawNotes).then(() => alert('Copied!')); }
+    function downloadNotes() {
+      const a = document.createElement('a');
+      a.href = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(rawNotes);
+      a.download = 'notes-from-photo.md';
+      a.click();
+    }
+
+    async function loadModels() {
+      const key = document.getElementById('apiKey').value.trim();
+      const status = document.getElementById('connStatus');
+      const btn = document.getElementById('testBtn');
+      if (!key) { status.style.display = 'block'; status.style.color = '#f87171'; status.textContent = '⚠ Enter your API key first.'; return; }
+      status.style.display = 'block'; status.style.color = '#94a3b8'; status.textContent = '🔌 Fetching models from RouteAPI...';
+      btn.textContent = '⏳ Loading...'; btn.disabled = true;
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/models', {
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (res.ok && json.data && json.data.length > 0) {
+          const sel = document.getElementById('modelSel');
+          sel.innerHTML = '';
+          json.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.id;
+            sel.appendChild(opt);
+          });
+          const preferred = ['gpt-4o-mini', 'openai/gpt-4o-mini'];
+          for (const p of preferred) {
+            if ([...sel.options].some(o => o.value === p)) { sel.value = p; break; }
+          }
+          document.getElementById('modelCount').textContent = `(${json.data.length} available)`;
+          status.style.color = '#34d399';
+          status.textContent = `✅ Connected! ${json.data.length} models loaded. Pick one above and generate.`;
+        } else {
+          status.style.color = '#f87171';
+          status.textContent = '❌ ' + (json.error?.message || JSON.stringify(json).slice(0, 120));
+        }
+      } catch (e) {
+        status.style.color = '#f87171';
+        status.textContent = '❌ Network error: ' + e.message;
+      }
+      btn.textContent = '🔌 Load Models'; btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

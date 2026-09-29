@@ -1,0 +1,269 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI PPT Generator | Task 3</title>
+  <meta name="description" content="Enter a topic and AI generates an interactive slideshow presentation." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07); --accent: #f59e0b; --accent-light: #fbbf24; --text: #e2e8f0; --muted: #64748b; --radius: 14px; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #f59e0b; top: -150px; left: -100px; }
+    .orb-b { width: 400px; height: 400px; background: #ef4444; bottom: -100px; right: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 20px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+    .input-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .input-row input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; padding: 14px 18px; outline: none; transition: border-color 0.2s; }
+    .input-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+    .api-field { margin-bottom: 20px; }
+    .api-field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .api-field input, .api-field select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s; }
+    .api-field input:focus, .api-field select:focus { border-color: var(--accent); }
+    .api-row { display: flex; gap: 10px; }
+    .api-row input { flex: 1; width: auto; }
+    .btn-load { padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(245,158,11,0.3); background: rgba(245,158,11,0.12); color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: Inter, sans-serif; transition: all 0.2s; }
+    .btn-load:hover { background: rgba(245,158,11,0.25); }
+    .btn-load:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(245,158,11,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .loader { display: none; text-align: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .slideshow { display: none; margin-top: 32px; }
+    .slide-counter { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+    .slide {
+      background: linear-gradient(135deg, #1a1a2e 0%, #13131f 100%);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 60px; min-height: 360px;
+      display: none; position: relative; overflow: hidden;
+      transition: all 0.4s;
+    }
+    .slide.active { display: flex; flex-direction: column; animation: slideIn 0.4s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+    .slide::before {
+      content: ''; position: absolute; top: -80px; right: -80px;
+      width: 250px; height: 250px; background: var(--accent); border-radius: 50%; opacity: 0.06;
+    }
+    .slide-num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-light); margin-bottom: 16px; }
+    .slide-title { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; color: #f1f5f9; margin-bottom: 28px; line-height: 1.2; }
+    .slide-bullets { list-style: none; }
+    .slide-bullets li {
+      display: flex; align-items: flex-start; gap: 12px; font-size: 16px; color: #cbd5e1; line-height: 1.6; margin-bottom: 14px;
+    }
+    .slide-bullets li::before { content: '▸'; color: var(--accent-light); flex-shrink: 0; margin-top: 2px; }
+
+    .nav-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; }
+    .nav-btn { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 12px 24px; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-light); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .slide-dots { display: flex; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); cursor: pointer; transition: all 0.2s; }
+    .dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">🎞️ AI PPT Generator</span>
+  </nav>
+
+  <div class="container">
+    <div class="badge">🎞️ Task 3</div>
+    <h1>AI Presentation Generator</h1>
+    <p class="subtitle">Enter a topic and get a 5-6 slide presentation with titles and bullet points.</p>
+
+    <div class="api-field">
+      <label>RouteAPI Key</label>
+      <div class="api-row">
+        <input type="password" id="apiKey" placeholder="sk-..." />
+        <button type="button" onclick="loadModels()" id="testBtn" class="btn-load">🔌 Load Models</button>
+      </div>
+      <div id="connStatus" style="font-size:12px;margin-top:6px;display:none;"></div>
+    </div>
+    <div class="api-field">
+      <label>Model <span id="modelCount" style="color:#64748b;font-weight:400;"></span></label>
+      <select id="modelSel">
+        <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+        <option value="openai/gpt-4o">openai/gpt-4o</option>
+        <option value="anthropic/claude-3-5-haiku">anthropic/claude-3-5-haiku</option>
+        <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+      </select>
+      <p style="font-size:11px;color:#475569;margin-top:5px;">Click "Load Models" above to fetch your actual available models.</p>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="topic" placeholder="e.g. The Solar System, Machine Learning Basics, French Revolution..." />
+      <button class="btn btn-primary" id="genBtn" onclick="generatePPT()">✨ Generate</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="loader" id="loader"><div class="spinner"></div><p style="color:var(--muted);font-size:14px;">AI is creating your slides...</p></div>
+
+    <div class="slideshow" id="slideshow">
+      <div class="slide-counter" id="slideCounter">Slide 1 of 6</div>
+      <div id="slidesContainer"></div>
+      <div class="nav-row">
+        <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">← Prev</button>
+        <div class="slide-dots" id="dots"></div>
+        <button class="nav-btn" id="nextBtn" onclick="navigate(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let slides = [], currentSlide = 0;
+
+    async function generatePPT() {
+      const key = document.getElementById('apiKey').value.trim();
+      const topic = document.getElementById('topic').value.trim();
+      if (!key) { showError('Please enter your RouteAPI Key.'); return; }
+      if (!topic) { showError('Please enter a topic.'); return; }
+
+      const prompt = `Create a presentation on the topic: "${topic}".
+Generate exactly 6 slides. Return ONLY a valid JSON array. Each element should have:
+- "title": (string) the slide title
+- "bullets": (array of 3-4 strings) the bullet points
+
+Return ONLY the JSON array, no other text, no markdown code blocks.`;
+
+      document.getElementById('slideshow').style.display = 'none';
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('genBtn').disabled = true;
+
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model: document.getElementById('modelSel').value, messages: [{ role: 'user', content: prompt }], max_tokens: 1200 })
+        });
+        const json = await res.json();
+        if (json.error) { showError(json.error.message); return; }
+        let raw = json.choices[0].message.content.trim();
+        raw = raw.replace(/```json|```/g, '').trim();
+        slides = JSON.parse(raw);
+        currentSlide = 0;
+        renderSlides();
+      } catch (e) { showError('Error: ' + e.message + '. Try again.'); }
+    }
+
+    function renderSlides() {
+      const container = document.getElementById('slidesContainer');
+      const dotsEl = document.getElementById('dots');
+      container.innerHTML = '';
+      dotsEl.innerHTML = '';
+
+      slides.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'slide' + (i === 0 ? ' active' : '');
+        div.id = 'slide-' + i;
+        div.innerHTML = `
+          <div class="slide-num">Slide ${i+1} / ${slides.length}</div>
+          <div class="slide-title">${s.title}</div>
+          <ul class="slide-bullets">${s.bullets.map(b => `<li>${b}</li>`).join('')}</ul>`;
+        container.appendChild(div);
+
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (i === 0 ? ' active' : '');
+        dot.onclick = () => goTo(i);
+        dotsEl.appendChild(dot);
+      });
+
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('slideshow').style.display = 'block';
+      document.getElementById('genBtn').disabled = false;
+      updateNav();
+    }
+
+    function navigate(dir) { goTo(currentSlide + dir); }
+    function goTo(idx) {
+      document.getElementById('slide-' + currentSlide).classList.remove('active');
+      document.querySelectorAll('.dot')[currentSlide].classList.remove('active');
+      currentSlide = Math.max(0, Math.min(slides.length - 1, idx));
+      document.getElementById('slide-' + currentSlide).classList.add('active');
+      document.querySelectorAll('.dot')[currentSlide].classList.add('active');
+      updateNav();
+    }
+    function updateNav() {
+      document.getElementById('slideCounter').textContent = `Slide ${currentSlide+1} of ${slides.length}`;
+      document.getElementById('prevBtn').disabled = currentSlide === 0;
+      document.getElementById('nextBtn').disabled = currentSlide === slides.length - 1;
+    }
+    function showError(msg) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('genBtn').disabled = false;
+      const el = document.getElementById('errorMsg');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    document.getElementById('topic').addEventListener('keydown', e => { if (e.key === 'Enter') generatePPT(); });
+
+    async function loadModels() {
+      const key = document.getElementById('apiKey').value.trim();
+      const status = document.getElementById('connStatus');
+      const btn = document.getElementById('testBtn');
+      if (!key) { status.style.display = 'block'; status.style.color = '#f87171'; status.textContent = '⚠ Enter your API key first.'; return; }
+      status.style.display = 'block'; status.style.color = '#94a3b8'; status.textContent = '🔌 Fetching models from RouteAPI...';
+      btn.textContent = '⏳ Loading...'; btn.disabled = true;
+      try {
+        const res = await fetch('https://api.routeapi.ai/v1/models', {
+          headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (res.ok && json.data && json.data.length > 0) {
+          const sel = document.getElementById('modelSel');
+          sel.innerHTML = '';
+          json.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.id;
+            sel.appendChild(opt);
+          });
+          const preferred = ['gpt-4o-mini', 'openai/gpt-4o-mini'];
+          for (const p of preferred) {
+            if ([...sel.options].some(o => o.value === p)) { sel.value = p; break; }
+          }
+          document.getElementById('modelCount').textContent = `(${json.data.length} available)`;
+          status.style.color = '#34d399';
+          status.textContent = `✅ Connected! ${json.data.length} models loaded. Pick one above and generate.`;
+        } else {
+          status.style.color = '#f87171';
+          status.textContent = '❌ ' + (json.error?.message || JSON.stringify(json).slice(0, 120));
+        }
+      } catch (e) {
+        status.style.color = '#f87171';
+        status.textContent = '❌ Network error: ' + e.message;
+      }
+      btn.textContent = '🔌 Load Models'; btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

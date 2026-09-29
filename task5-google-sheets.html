@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Sheets Backend | Task 5</title>
+  <meta name="description" content="Connect Google Sheets as a live database and display/submit data from a dynamic frontend." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0a0a12; --card: #13131f; --border: rgba(255,255,255,0.07); --accent: #0ea5e9; --accent-light: #38bdf8; --text: #e2e8f0; --muted: #64748b; --radius: 14px; --green: #10b981; --red: #ef4444; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.12; pointer-events: none; z-index: 0; }
+    .orb-a { width: 500px; height: 500px; background: #0ea5e9; top: -150px; left: -100px; }
+    .orb-b { width: 400px; height: 400px; background: #10b981; bottom: -100px; right: -100px; }
+
+    nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+    nav a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    nav .sep { color: var(--border); }
+    nav .title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-light); }
+
+    .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(14,165,233,0.12); border: 1px solid rgba(14,165,233,0.3); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-light); margin-bottom: 20px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+    .setup-card, .data-card, .add-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 24px; }
+    .card-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(14,165,233,0.2); color: var(--accent-light); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    input, textarea { width: 100%; background: #0d0d1a; border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.2s; }
+    input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(14,165,233,0.12); }
+    .field { margin-bottom: 16px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #0ea5e9, #10b981); color: #fff; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(14,165,233,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-sm { padding: 8px 16px; font-size: 13px; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--accent-light); color: var(--accent-light); }
+
+    .status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .status-pill { padding: 6px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+    .pill-idle { background: rgba(100,116,139,0.15); color: var(--muted); }
+    .pill-ok { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .pill-err { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    thead th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+    tbody td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    tbody tr:hover td { background: rgba(14,165,233,0.04); }
+    .empty-table { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+    .info-box { background: rgba(14,165,233,0.07); border: 1px solid rgba(14,165,233,0.2); border-radius: 10px; padding: 16px; font-size: 13px; color: #94a3b8; line-height: 1.7; margin-bottom: 20px; }
+    .info-box code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--accent-light); }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1e2d3d; border: 1px solid rgba(14,165,233,0.3); border-radius: 10px; padding: 14px 20px; font-size: 13px; color: var(--text); z-index: 999; display: none; animation: fadeInUp 0.3s; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="toast" id="toast"></div>
+
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <span class="sep">›</span>
+    <span class="title">📊 Google Sheets Backend</span>
+  </nav>
+
+  <div class="container">
+    <div class="badge">📊 Task 5</div>
+    <h1>Google Sheets Backend</h1>
+    <p class="subtitle">Use Google Sheets as a live database — read and write data dynamically via Apps Script.</p>
+
+    <div class="setup-card">
+      <div class="card-title"><div class="step-num">1</div> Setup: Enter Your Apps Script URL</div>
+      <div class="info-box">
+        <strong>How to set up your Google Sheet:</strong><br/>
+        1. Open Google Sheets → Extensions → Apps Script<br/>
+        2. Paste a <code>doGet()</code> function that returns sheet data as JSON<br/>
+        3. Deploy as a Web App (Anyone can access) and copy the URL here<br/>
+        4. See the <a href="https://developers.google.com/apps-script/guides/web" target="_blank" style="color:var(--accent-light)">Apps Script docs</a> for details.
+      </div>
+      <div class="field">
+        <label>Apps Script Web App URL</label>
+        <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec" />
+      </div>
+      <div class="status-row">
+        <div class="status-pill pill-idle" id="statusPill">● Not Connected</div>
+        <button class="btn btn-primary btn-sm" onclick="loadData()">⚡ Fetch Data</button>
+        <button class="btn btn-outline btn-sm" onclick="clearTable()">✕ Clear</button>
+      </div>
+    </div>
+
+    <div class="data-card">
+      <div class="card-title"><div class="step-num">2</div> Live Sheet Data</div>
+      <div id="tableContainer">
+        <div class="empty-table">📊 Connect your Google Sheet to see data here.</div>
+      </div>
+    </div>
+
+    <div class="add-card">
+      <div class="card-title"><div class="step-num">3</div> Add New Row</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Submit new data to your sheet via a POST request. Columns depend on your sheet structure.</p>
+      <div class="row3">
+        <div class="field"><label>Column 1</label><input type="text" id="col1" placeholder="e.g. Name" /></div>
+        <div class="field"><label>Column 2</label><input type="text" id="col2" placeholder="e.g. Score" /></div>
+        <div class="field"><label>Column 3</label><input type="text" id="col3" placeholder="e.g. Date" /></div>
+      </div>
+      <button class="btn btn-primary" onclick="submitRow()">➕ Add Row to Sheet</button>
+    </div>
+
+    <!-- Demo / sample mode -->
+    <div class="data-card" style="border-color:rgba(14,165,233,0.2)">
+      <div class="card-title">💡 Demo Mode — Sample Data</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">No Apps Script? Click below to load sample student data to explore the UI.</p>
+      <button class="btn btn-outline" onclick="loadDemo()">▶ Load Sample Data</button>
+    </div>
+  </div>
+
+  <script>
+    async function loadData() {
+      const url = document.getElementById('scriptUrl').value.trim();
+      if (!url) { toast('⚠ Please enter your Apps Script URL.'); return; }
+      setStatus('loading');
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (Array.isArray(data)) { renderTable(data); setStatus('ok'); }
+        else { throw new Error('Response is not an array'); }
+      } catch (e) { setStatus('err'); toast('❌ Failed: ' + e.message); }
+    }
+
+    function renderTable(rows) {
+      if (!rows.length) { document.getElementById('tableContainer').innerHTML = '<div class="empty-table">Sheet is empty.</div>'; return; }
+      const headers = Object.keys(rows[0]);
+      let html = '<div style="overflow-x:auto;"><table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+      rows.forEach(row => { html += '<tr>' + headers.map(h => `<td>${row[h] ?? ''}</td>`).join('') + '</tr>'; });
+      html += '</tbody></table></div>';
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    async function submitRow() {
+      const url = document.getElementById('scriptUrl').value.trim();
+      const col1 = document.getElementById('col1').value;
+      const col2 = document.getElementById('col2').value;
+      const col3 = document.getElementById('col3').value;
+      if (!url) { toast('⚠ Enter your Apps Script URL first.'); return; }
+      try {
+        await fetch(url, { method: 'POST', body: JSON.stringify({ col1, col2, col3 }), headers: { 'Content-Type': 'application/json' } });
+        toast('✅ Row submitted! Refreshing...');
+        setTimeout(loadData, 1000);
+        document.getElementById('col1').value = '';
+        document.getElementById('col2').value = '';
+        document.getElementById('col3').value = '';
+      } catch (e) { toast('❌ Submit failed: ' + e.message); }
+    }
+
+    function loadDemo() {
+      const demo = [
+        { Name: 'Alice Johnson', Subject: 'Mathematics', Score: 92, Date: '2024-01-15' },
+        { Name: 'Bob Smith', Subject: 'Physics', Score: 87, Date: '2024-01-15' },
+        { Name: 'Carol Davis', Subject: 'Chemistry', Score: 95, Date: '2024-01-16' },
+        { Name: 'David Lee', Subject: 'Biology', Score: 78, Date: '2024-01-16' },
+        { Name: 'Emma Wilson', Subject: 'English', Score: 91, Date: '2024-01-17' },
+        { Name: 'Frank Brown', Subject: 'History', Score: 83, Date: '2024-01-17' },
+      ];
+      renderTable(demo);
+      setStatus('ok');
+      toast('✅ Demo data loaded!');
+    }
+
+    function setStatus(state) {
+      const pill = document.getElementById('statusPill');
+      if (state === 'loading') { pill.className = 'status-pill pill-idle'; pill.innerHTML = '<span class="spinner"></span> Connecting...'; }
+      else if (state === 'ok') { pill.className = 'status-pill pill-ok'; pill.textContent = '● Connected'; }
+      else { pill.className = 'status-pill pill-err'; pill.textContent = '● Error'; }
+    }
+
+    function clearTable() {
+      document.getElementById('tableContainer').innerHTML = '<div class="empty-table">📊 Connect your Google Sheet to see data here.</div>';
+      document.getElementById('statusPill').className = 'status-pill pill-idle';
+      document.getElementById('statusPill').textContent = '● Not Connected';
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 3000);
+    }
+  </script>
+</body>
+</html>
